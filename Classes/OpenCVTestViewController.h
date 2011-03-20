@@ -1,7 +1,14 @@
 #import <UIKit/UIKit.h>
 #import <AudioToolbox/AudioToolbox.h>
 
-@interface UIProgressIndicator : UIActivityIndicatorView {
+#import <CoreMedia/CoreMedia.h>
+#import <AVFoundation/AVFoundation.h>
+#import <CoreVideo/CoreVideo.h>
+#import <opencv/cv.h>
+
+#define HAS_VIDEO_CAPTURE (__IPHONE_OS_VERSION_MIN_REQUIRED >= 40000 && TARGET_OS_EMBEDDED)
+
+@interface UIProgressIndicator : UIActivityIndicatorView  {
 }
 
 + (struct CGSize)size;
@@ -37,6 +44,8 @@
 - (void)hide;
 - (void)done;
 - (void)dealloc;
+
+
 @end
 
 typedef enum {
@@ -44,7 +53,7 @@ typedef enum {
 	ActionSheetToSelectTypeOfMarks
 } OpenCVTestViewControllerActionSheetAction;
 
-@interface OpenCVTestViewController : UIViewController <UIActionSheetDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate> {
+@interface OpenCVTestViewController : UIViewController <UIActionSheetDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, AVCaptureVideoDataOutputSampleBufferDelegate> {
 	IBOutlet UIImageView *imageView;
 	OpenCVTestViewControllerActionSheetAction actionSheetAction;
 	UIProgressHUD *progressHUD;
@@ -56,5 +65,16 @@ typedef enum {
 - (IBAction)edgeDetect:(id)sender;
 - (IBAction)faceDetect:(id)sender;
 
+
+
 @property (nonatomic, retain) UIImageView *imageView;
+
+
+- (void)startCameraCapture;
+- (AVCaptureDevice *)frontFacingCamera;
+- (IplImage *)createIplImageFromSampleBuffer:(CMSampleBufferRef)sampleBuffer;
+- (CvSeq *)opencvFaceDetectImage:(IplImage *)image withOverlay:(UIImage *)overlayImage doRotate:(BOOL)rotate numChannels:(int)channels withStorage:(CvMemStorage *)storage;
+
+- (IplImage *)rotateImage:(IplImage *)src withDegrees:(float )angleDegrees;
+
 @end

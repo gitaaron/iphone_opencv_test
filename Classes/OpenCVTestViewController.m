@@ -1,6 +1,6 @@
 #import "OpenCVTestViewController.h"
 
-#import <opencv/cv.h>
+
 
 @implementation OpenCVTestViewController
 @synthesize imageView;
@@ -111,23 +111,13 @@
 
 - (void) opencvFaceDetect:(UIImage *)overlayImage  {
 	if(imageView.image) {
-		cvSetErrMode(CV_ErrModeParent);
-
+		
+		int scale = 2;
 		IplImage *image = [self CreateIplImageFromUIImage:imageView.image];
 		
-		// Scaling down
-		IplImage *small_image = cvCreateImage(cvSize(image->width/2,image->height/2), IPL_DEPTH_8U, 3);
-		cvPyrDown(image, small_image, CV_GAUSSIAN_5x5);
-		int scale = 2;
-		
-		// Load XML
-		NSString *path = [[NSBundle mainBundle] pathForResource:@"haarcascade_frontalface_default" ofType:@"xml"];
-		CvHaarClassifierCascade* cascade = (CvHaarClassifierCascade*)cvLoad([path cStringUsingEncoding:NSASCIIStringEncoding], NULL, NULL, NULL);
 		CvMemStorage* storage = cvCreateMemStorage(0);
+		CvSeq *faces = [self opencvFaceDetectImage:image withOverlay:overlayImage doRotate:NO numChannels:3 withStorage:storage];
 		
-		// Detect faces and draw rectangle on them
-		CvSeq* faces = cvHaarDetectObjects(small_image, cascade, storage, 1.2f, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(20, 20));
-		cvReleaseImage(&small_image);
 		
 		// Create canvas to show the results
 		CGImageRef imageRef = imageView.image.CGImage;
@@ -139,6 +129,8 @@
 		
 		CGContextSetLineWidth(contextRef, 4);
 		CGContextSetRGBStrokeColor(contextRef, 0.0, 0.0, 1.0, 0.5);
+		
+		
 		
 		// Draw results on the iamge
 		for(int i = 0; i < faces->total; i++) {
@@ -157,15 +149,88 @@
 			[pool release];
 		}
 		
+		
+		
 		imageView.image = [UIImage imageWithCGImage:CGBitmapContextCreateImage(contextRef)];
 		CGContextRelease(contextRef);
 		CGColorSpaceRelease(colorSpace);
 		
 		cvReleaseMemStorage(&storage);
-		cvReleaseHaarClassifierCascade(&cascade);
-
+		
+		
 		[self hideProgressIndicator];
+	 
+	 } 
+}
+
+- (CvSeq *)opencvFaceDetectImage:(IplImage *)image withOverlay:(UIImage *)overlayImage doRotate:(BOOL)rotate numChannels:(int)channels withStorage:(CvMemStorage *)storage {
+
+	cvSetErrMode(CV_ErrModeParent);
+
+	
+	// Scaling down
+	IplImage *small_image = cvCreateImage(cvSize(image->width/2,image->height/2), IPL_DEPTH_8U, channels);
+	IplImage *small_image_rotated;
+	cvPyrDown(image, small_image, CV_GAUSSIAN_5x5);
+	
+	if(rotate) {
+		small_image_rotated = [self rotateImage:small_image withDegrees:90.0];
 	}
+		
+	// Load XML
+	NSString *path = [[NSBundle mainBundle] pathForResource:@"haarcascade_frontalface_default" ofType:@"xml"];
+	
+	CvHaarClassifierCascade* cascade = (CvHaarClassifierCascade*)cvLoad([path cStringUsingEncoding:NSASCIIStringEncoding], NULL, NULL, NULL);
+
+	
+	// Detect faces and draw rectangle on them	
+	CvSeq* faces;
+	if(rotate) {
+		faces = cvHaarDetectObjects(small_image_rotated, cascade, storage, 1.2f, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(20, 20));
+	} else {
+		faces = cvHaarDetectObjects(small_image, cascade, storage, 1.2f, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(20, 20));		
+	}
+	
+
+
+	
+	cvReleaseImage(&small_image);
+
+	cvReleaseHaarClassifierCascade(&cascade);
+	
+	if(rotate) {
+		cvReleaseImage(&small_image_rotated);
+	}
+	
+	return faces;
+	
+
+
+
+}
+
+// Rotate the image clockwise (or counter-clockwise if negative).
+// Remember to free the returned image.
+- (IplImage *)rotateImage:(IplImage *)src withDegrees:(float )angleDegrees
+{
+	
+	
+	IplImage *dest;
+	dest = cvCloneImage( src );
+	dest->origin = src->origin;
+	cvZero( dest );
+	
+	
+	CvPoint2D32f center = cvPoint2D32f(src->width/2, src->height/2);
+	double angle = -90.0;
+	double scale = 1.0;
+	CvMat* rot_mat = cvCreateMat(2,3,CV_32FC1);
+	
+	cv2DRotationMatrix( center, angle, scale, rot_mat );
+	
+	cvWarpAffine( src, dest, rot_mat, CV_WARP_FILL_OUTLIERS, cvScalarAll(0) );
+	
+	return dest;
 }
 
 
@@ -176,7 +241,7 @@
 	if(!actionSheetAction) {
 		UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:@""
 																 delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil
-														otherButtonTitles:@"Use Photo from Library", @"Take Photo with Camera", @"Use Default Lena", nil];
+														otherButtonTitles:@"Use Photo from Library", @"Take Photo with Camera", @"Use Default Lena", @"Realtime Camera Mode", nil];
 		actionSheet.actionSheetStyle = UIActionSheetStyleDefault;
 		actionSheetAction = ActionSheetToSelectTypeOfSource;
 		[actionSheet showInView:self.view];
@@ -243,6 +308,9 @@
 			} else if(buttonIndex == 2) {
 				NSString *path = [[NSBundle mainBundle] pathForResource:@"lena" ofType:@"jpg"];
 				imageView.image = [UIImage imageWithContentsOfFile:path];
+				break;
+			} else if(buttonIndex==3) {
+				[self startCameraCapture];
 				break;
 			} else {
 				// Cancel
@@ -382,4 +450,121 @@
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
 	[[picker parentViewController] dismissModalViewControllerAnimated:YES];
 }
+
+
+
+- (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
+
+	IplImage *i = [self createIplImageFromSampleBuffer:sampleBuffer];
+	CvMemStorage* storage = cvCreateMemStorage(0);
+	CvSeq *faces = [self opencvFaceDetectImage:i withOverlay:NULL doRotate:YES numChannels:4 withStorage:storage];
+	
+	
+	if(faces->total > 0) {
+		NSLog(@"found %i", faces->total);
+	} else {
+		NSLog(@"did not find faces");
+	}
+
+}
+
+- (void)startCameraCapture {
+	// Create the AVCapture Session
+	NSLog(@"startcameracapture");
+//#if HAS_VIDEO_CAPTURE	
+	AVCaptureSession *session = [[AVCaptureSession alloc] init];
+	
+	// Create a preview layer to show the output from the camera
+	
+	AVCaptureVideoPreviewLayer *previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:session];
+	previewLayer.frame = self.view.frame;
+	previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+	[self.view.layer addSublayer:previewLayer];
+	
+	AVCaptureDevice *camera = [self frontFacingCamera];
+	
+	// Create a AVCaptureInput with the camera device
+	NSError *error = nil;
+	AVCaptureInput *cameraInput = [[AVCaptureDeviceInput alloc] initWithDevice:camera error:&error];
+	if(cameraInput == nil) {
+		NSLog(@"Error to create camera capture:%@", error);
+	}
+	
+	// Set the outpua
+	AVCaptureVideoDataOutput *videoOutput = [[AVCaptureVideoDataOutput alloc] init];
+	videoOutput.alwaysDiscardsLateVideoFrames = YES;
+	
+	// create a queue besides the main thread queue to run the capture on
+	dispatch_queue_t captureQueue = dispatch_queue_create("captureQueue", NULL);
+	
+	// setup our delegate
+	[videoOutput setSampleBufferDelegate:self queue:captureQueue];
+	
+	// release the queue.  I still don't entirely understand why we're release it here,
+	// but the code examples I've found indicate this is the right thing. 
+	dispatch_release(captureQueue);
+	
+	// configure the pixel format
+	
+	[videoOutput setVideoSettings:[NSDictionary dictionaryWithObject:[NSNumber numberWithInt:kCVPixelFormatType_32BGRA] forKey:(id)kCVPixelBufferPixelFormatTypeKey]]; // BGRA is necessary for manual preview
+	
+	// and the size of the frames we want
+	// try AVCaptureSessionPresetLow if this is too slow...
+	[session setSessionPreset:AVCaptureSessionPresetMedium];
+	
+	// If you wish to cap the frame rate to a known value, such as 10 fps, set 
+	// minFrameDuration.
+	videoOutput.minFrameDuration = CMTimeMake(1, 10);
+	
+	// Add the input and output
+	[session addInput:cameraInput];
+	[session addOutput:videoOutput];
+	
+	// Start the session
+	[session startRunning];  
+	
+	
+//#endif		
+	
+}
+
+
+
+- (IplImage *)createIplImageFromSampleBuffer:(CMSampleBufferRef)sampleBuffer {
+    IplImage *iplimage = 0;
+    if (sampleBuffer) {
+        CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
+        CVPixelBufferLockBaseAddress(imageBuffer, 0);
+		
+        // get information of the image in the buffer
+        uint8_t *bufferBaseAddress = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0);
+        size_t bufferWidth = CVPixelBufferGetWidth(imageBuffer);
+        size_t bufferHeight = CVPixelBufferGetHeight(imageBuffer);
+		
+        // create IplImage
+        if (bufferBaseAddress) {
+            iplimage = cvCreateImage(cvSize(bufferWidth, bufferHeight), IPL_DEPTH_8U, 4);
+            iplimage->imageData = (char*)bufferBaseAddress;
+        }
+		
+        // release memory
+        CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+    }
+    else
+        NSLog(@"No sampleBuffer!!");
+	
+    return iplimage;
+}
+
+- (AVCaptureDevice *)frontFacingCamera {
+	NSArray *cameras = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+	for (AVCaptureDevice *device in cameras) {
+		if(device.position == AVCaptureDevicePositionFront) {
+			return device;
+		}
+	}
+	return [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+}
+
+
 @end
