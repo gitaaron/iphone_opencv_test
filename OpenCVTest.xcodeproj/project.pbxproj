@@ -28,6 +28,7 @@
 		54A4A00512211C0D006678AF /* libcxcore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 54A4A00412211C0D006678AF /* libcxcore.a */; };
 		54BBAF3D0F04148D00568ED9 /* Tink.aiff in Resources */ = {isa = PBXBuildFile; fileRef = 54BBAF3C0F04148D00568ED9 /* Tink.aiff */; };
 		54BBAF4F0F0414C200568ED9 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54BBAF4E0F0414C200568ED9 /* AudioToolbox.framework */; };
+		54BFA9991364A34900C56FA4 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54BFA9981364A34900C56FA4 /* QuartzCore.framework */; };
 		54ED862C123C4A8B00ED9656 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54ED862B123C4A8B00ED9656 /* Accelerate.framework */; };
 		54FC5BDE0E3EB3EB00F48645 /* laughing_man.png in Resources */ = {isa = PBXBuildFile; fileRef = 54FC5BDD0E3EB3EB00F48645 /* laughing_man.png */; };
 /* End PBXBuildFile section */
@@ -58,6 +59,7 @@
 		54A4A00412211C0D006678AF /* libcxcore.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcxcore.a; path = opencv_device/lib/libcxcore.a; sourceTree = "<group>"; };
 		54BBAF3C0F04148D00568ED9 /* Tink.aiff */ = {isa = PBXFileReference; lastKnownFileType = audio.aiff; path = Tink.aiff; sourceTree = "<group>"; };
 		54BBAF4E0F0414C200568ED9 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		54BFA9981364A34900C56FA4 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		54ED862B123C4A8B00ED9656 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		54FC5BDD0E3EB3EB00F48645 /* laughing_man.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = laughing_man.png; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -78,6 +80,7 @@
 				541AAC4A133560100043FB9C /* CoreMedia.framework in Frameworks */,
 				541AAC4E133560180043FB9C /* AVFoundation.framework in Frameworks */,
 				541AAC52133560220043FB9C /* CoreVideo.framework in Frameworks */,
+				54BFA9991364A34900C56FA4 /* QuartzCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -154,6 +157,7 @@
 				541AAC49133560100043FB9C /* CoreMedia.framework */,
 				541AAC4D133560180043FB9C /* AVFoundation.framework */,
 				541AAC51133560220043FB9C /* CoreVideo.framework */,
+				54BFA9981364A34900C56FA4 /* QuartzCore.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -307,6 +311,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				SDKROOT = iphoneos;
+				VALID_ARCHS = "armv6 armv7";
 			};
 			name = Debug;
 		};

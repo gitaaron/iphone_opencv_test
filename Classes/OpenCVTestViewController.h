@@ -2,6 +2,7 @@
 #import <AudioToolbox/AudioToolbox.h>
 
 #import <CoreMedia/CoreMedia.h>
+#import <QuartzCore/QuartzCore.h>
 #import <AVFoundation/AVFoundation.h>
 #import <CoreVideo/CoreVideo.h>
 #import <opencv/cv.h>
@@ -58,6 +59,9 @@ typedef enum {
 	OpenCVTestViewControllerActionSheetAction actionSheetAction;
 	UIProgressHUD *progressHUD;
 	SystemSoundID alertSoundID;
+	CALayer *overlayLayer;
+	CGRect recognizedRect;
+	BOOL foundFace;
 }
 
 - (IBAction)loadImage:(id)sender;
@@ -68,6 +72,8 @@ typedef enum {
 
 
 @property (nonatomic, retain) UIImageView *imageView;
+@property (nonatomic, retain) CALayer *overlayLayer;
+@property (readwrite) CGRect recognizedRect;
 
 
 - (void)startCameraCapture;

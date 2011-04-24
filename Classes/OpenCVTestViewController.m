@@ -2,12 +2,17 @@
 
 
 
+#define RECT_UPDATE_INTERVAL 0.02
+
+#define REDRAW_DELTA 10
+
 @implementation OpenCVTestViewController
-@synthesize imageView;
+@synthesize imageView, overlayLayer, recognizedRect;
 
 - (void)dealloc {
 	AudioServicesDisposeSystemSoundID(alertSoundID);
 	[imageView dealloc];
+	self.overlayLayer = nil;
 	[super dealloc];
 }
 
@@ -131,7 +136,7 @@
 		CGContextSetRGBStrokeColor(contextRef, 0.0, 0.0, 1.0, 0.5);
 		
 		
-		
+		foundFace = (faces->total >=1)?YES:NO;
 		// Draw results on the iamge
 		for(int i = 0; i < faces->total; i++) {
 			NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
@@ -139,7 +144,7 @@
 			// Calc the rect of faces
 			CvRect cvrect = *(CvRect*)cvGetSeqElem(faces, i);
 			CGRect face_rect = CGContextConvertRectToDeviceSpace(contextRef, CGRectMake(cvrect.x * scale, cvrect.y * scale, cvrect.width * scale, cvrect.height * scale));
-			
+			self.recognizedRect = face_rect;
 			if(overlayImage) {
 				CGContextDrawImage(contextRef, face_rect, overlayImage.CGImage);
 			} else {
@@ -203,11 +208,46 @@
 	}
 	
 	return faces;
-	
-
 
 
 }
+
+
+- (void)updateRecognitionRect {
+	// Speed up animations
+	//[CATransaction setValue:[NSNumber numberWithFloat:RECT_UPDATE_INTERVAL * 0.4] forKey:kCATransactionAnimationDuration];
+	
+	CGRect newRect = self.recognizedRect;
+	if(foundFace) {
+		// only redraw rect for significant changes
+		int delta = abs(overlayLayer.frame.origin.x - newRect.origin.x) + abs(overlayLayer.frame.origin.y - newRect.origin.y) +
+					abs(overlayLayer.frame.size.width - newRect.size.width) + abs(overlayLayer.frame.size.height - newRect.size.height);
+		if(delta > REDRAW_DELTA) {
+			NSLog(@"redrawing x : %f y : %f w : %f h : %f", newRect.origin.x, newRect.origin.y, newRect.size.width, newRect.size.height);
+			overlayLayer.frame = newRect;
+		} 
+		overlayLayer.hidden = NO;
+	} else {
+		overlayLayer.hidden = YES;
+	}
+	
+	[overlayLayer setNeedsDisplay];
+}
+
+
+
+- (void)drawLayer:(CALayer *)layer inContext:(CGContextRef)context {
+	int border = 0;
+	CGContextSetLineWidth(context ,2.0);
+	CGContextSetRGBStrokeColor(context, 0.0, 0.8, 1.0, 1.0);
+	CGContextStrokeRect(context, CGRectMake(layer.bounds.origin.x + border,
+											layer.bounds.origin.y + border,
+											layer.bounds.size.width - border * 2,
+											layer.bounds.size.height - border * 2));
+	
+}
+
+
 
 // Rotate the image clockwise (or counter-clockwise if negative).
 // Remember to free the returned image.
@@ -454,15 +494,24 @@
 
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
-
+	int scale = 2;
 	IplImage *i = [self createIplImageFromSampleBuffer:sampleBuffer];
 	CvMemStorage* storage = cvCreateMemStorage(0);
 	CvSeq *faces = [self opencvFaceDetectImage:i withOverlay:NULL doRotate:YES numChannels:4 withStorage:storage];
 	
 	
 	if(faces->total > 0) {
-		NSLog(@"found %i", faces->total);
+		NSLog(@"found %i iw : %i fw : %i", faces->total, i->width, self.view.frame.size.width);
+		// Create canvas to show the results
+		CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+		CGContextRef contextRef = CGBitmapContextCreate(NULL, i->width, i->height,
+														8, i->width * 4,
+														colorSpace, kCGImageAlphaPremultipliedLast|kCGBitmapByteOrderDefault);		
+		CvRect cvrect = *(CvRect*)cvGetSeqElem(faces, 0);
+		self.recognizedRect = CGRectMake(240-cvrect.x* scale, cvrect.y*scale, cvrect.width*scale, cvrect.height*scale); //CGContextConvertRectToDeviceSpace(contextRef, CGRectMake(cvrect.x * scale, -cvrect.y * scale, cvrect.width * scale, cvrect.height * scale));
+		foundFace = YES;
 	} else {
+		foundFace = NO;
 		NSLog(@"did not find faces");
 	}
 
@@ -475,11 +524,25 @@
 	AVCaptureSession *session = [[AVCaptureSession alloc] init];
 	
 	// Create a preview layer to show the output from the camera
-	
 	AVCaptureVideoPreviewLayer *previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:session];
-	previewLayer.frame = self.view.frame;
+	CGRect f = self.view.frame;
+	previewLayer.frame = CGRectMake(f.origin.x, f.origin.y-20, f.size.width, f.size.height);
 	previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
 	[self.view.layer addSublayer:previewLayer];
+	
+	
+	// Create recognition rectangle overlay
+	overlayLayer = [CALayer layer];
+	CGRect frame = self.view.layer.bounds;
+	frame.origin.x += 10.0f;
+	frame.origin.y += 10.0f;
+	frame.size.width = 20.0f;
+	frame.size.height = 20.0f;
+	overlayLayer.frame = frame;
+	overlayLayer.backgroundColor = [[UIColor clearColor] CGColor];
+	overlayLayer.delegate = self;
+	[self.view.layer addSublayer:overlayLayer];
+	
 	
 	AVCaptureDevice *camera = [self frontFacingCamera];
 	
@@ -523,6 +586,8 @@
 	// Start the session
 	[session startRunning];  
 	
+	
+	[NSTimer scheduledTimerWithTimeInterval:RECT_UPDATE_INTERVAL target:self selector:@selector(updateRecognitionRect) userInfo:nil repeats:YES];
 	
 //#endif		
 	
