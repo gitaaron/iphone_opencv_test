@@ -1,10 +1,10 @@
 #import "OpenCVTestViewController.h"
 
-
-
 #define RECT_UPDATE_INTERVAL 0.02
 
 #define REDRAW_DELTA 10
+#import <opencv2/imgproc/imgproc_c.h>
+#import <opencv2/objdetect/objdetect.hpp>
 
 @implementation OpenCVTestViewController
 @synthesize imageView, overlayLayer, recognizedRect;
@@ -84,6 +84,8 @@
 }
 
 - (void)opencvEdgeDetect {
+	NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
+
 	if(imageView.image) {
 		cvSetErrMode(CV_ErrModeParent);
 
@@ -112,9 +114,13 @@
 
 		[self hideProgressIndicator];
 	}
+
+	[pool release];
 }
 
 - (void) opencvFaceDetect:(UIImage *)overlayImage  {
+	NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
+
 	if(imageView.image) {
 		
 		int scale = 2;
@@ -122,7 +128,12 @@
 		
 		CvMemStorage* storage = cvCreateMemStorage(0);
 		CvSeq *faces = [self opencvFaceDetectImage:image withOverlay:overlayImage doRotate:NO numChannels:3 withStorage:storage];
-		
+	
+                /*        
+		// Detect faces and draw rectangle on them
+		CvSeq* faces = cvHaarDetectObjects(small_image, cascade, storage, 1.2f, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(0,0), cvSize(20, 20));
+		cvReleaseImage(&small_image);
+                */
 		
 		// Create canvas to show the results
 		CGImageRef imageRef = imageView.image.CGImage;
@@ -271,6 +282,8 @@
 	cvWarpAffine( src, dest, rot_mat, CV_WARP_FILL_OUTLIERS, cvScalarAll(0) );
 	
 	return dest;
+
+	[pool release];
 }
 
 

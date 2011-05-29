@@ -50,8 +50,8 @@
 @end
 
 typedef enum {
-	ActionSheetToSelectTypeOfSource = 1,
-	ActionSheetToSelectTypeOfMarks
+    ActionSheetToSelectTypeOfSource = 1,
+    ActionSheetToSelectTypeOfMarks
 } OpenCVTestViewControllerActionSheetAction;
 
 @interface OpenCVTestViewController : UIViewController <UIActionSheetDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, AVCaptureVideoDataOutputSampleBufferDelegate> {
