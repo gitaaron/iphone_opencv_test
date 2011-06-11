@@ -199,12 +199,14 @@
 	CvHaarClassifierCascade* cascade = (CvHaarClassifierCascade*)cvLoad([path cStringUsingEncoding:NSASCIIStringEncoding], NULL, NULL, NULL);
 
 	
+    //CvSeq* faces = cvHaarDetectObjects(small_image, cascade, storage, 1.2f, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(0,0), cvSize(20, 20));
+    
 	// Detect faces and draw rectangle on them	
 	CvSeq* faces;
 	if(rotate) {
-		faces = cvHaarDetectObjects(small_image_rotated, cascade, storage, 1.2f, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(20, 20));
+		faces = cvHaarDetectObjects(small_image_rotated, cascade, storage, 1.2f, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(0,0), cvSize(20, 20));
 	} else {
-		faces = cvHaarDetectObjects(small_image, cascade, storage, 1.2f, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(20, 20));		
+		faces = cvHaarDetectObjects(small_image, cascade, storage, 1.2f, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(0,0), cvSize(20, 20));		
 	}
 	
 
@@ -283,7 +285,6 @@
 	
 	return dest;
 
-	[pool release];
 }
 
 
